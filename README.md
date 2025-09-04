@@ -53,535 +53,288 @@
 
 ## 🚀 快速开始
 
-### 推荐方案选择
+### 💡 方案选择指南
 
-| 用户类型    | 推荐方案         | 特点                 |
-| ----------- | ---------------- | -------------------- |
-| 🆕 新手用户 | Docker 单容器    | 最简单，5 分钟部署   |
-| 👥 多人使用 | Vercel + Upstash | 免费，支持多用户     |
-| 🏠 自托管   | Docker + Redis   | 功能完整，数据可控   |
-| 🏢 生产环境 | Docker + Kvrocks | 高可靠性，零丢失风险 |
+| 使用场景     | 推荐方案         | 存储类型     | 成人内容过滤 | 多用户 | 部署难度 |
+| ------------ | ---------------- | ------------ | ------------ | ------ | -------- |
+| **个人使用** | Docker 单容器    | localstorage | ❌           | ❌     | ⭐       |
+| **家庭使用** | Docker + Redis   | redis        | ✅           | ✅     | ⭐⭐     |
+| **免费部署** | Vercel + Upstash | upstash      | ✅           | ✅     | ⭐⭐⭐   |
+| **生产环境** | Docker + Kvrocks | kvrocks      | ✅           | ✅     | ⭐⭐     |
+| **全球加速** | Cloudflare Pages | d1           | ✅           | ✅     | ⭐⭐⭐⭐ |
+
+> 💡 **重要提示**：成人内容过滤功能需要数据库存储支持，不支持 `localstorage` 方式
 
 ---
 
 ## 📋 部署方案
 
-### 方案一：Docker 单容器（推荐新手）
+### 方案一：Docker 单容器（最简单）
 
-**适合场景**：个人使用，最简单的部署方式
+**特点**：5 分钟部署，个人使用，无多用户功能
 
 ```bash
-# 一键启动
 docker run -d \
   --name katelyatv \
   -p 3000:3000 \
-  --env PASSWORD=your_password \
-  --restart unless-stopped \
-  ghcr.io/katelya77/katelyatv:latest
-
-# 访问 http://localhost:3000
-```
-
-**自定义配置文件（可选）**：
-
-```bash
-# 挂载配置文件
-docker run -d \
-  --name katelyatv \
-  -p 3000:3000 \
-  --env PASSWORD=your_password \
-  -v ./config.json:/app/config.json:ro \
+  -e PASSWORD=your_password \
   --restart unless-stopped \
   ghcr.io/katelya77/katelyatv:latest
 ```
 
-### 方案二：Docker + Redis（多用户推荐）
-
-**适合场景**：家庭/团队使用，支持多用户和数据同步
+**挂载自定义配置**（可选）：
 
 ```bash
-# 下载配置文件
+docker run -d \
+  --name katelyatv \
+  -p 3000:3000 \
+  -e PASSWORD=your_password \
+  -v $(pwd)/config.json:/app/config.json:ro \
+  --restart unless-stopped \
+  ghcr.io/katelya77/katelyatv:latest
+```
+
+### 方案二：Docker + Redis（推荐家庭使用）
+
+**特点**：完整功能，多用户支持，成人内容过滤
+
+```bash
+# 1. 下载配置文件
 curl -O https://raw.githubusercontent.com/katelya77/KatelyaTV/main/docker-compose.redis.yml
 curl -O https://raw.githubusercontent.com/katelya77/KatelyaTV/main/.env.redis.example
+
+# 2. 配置环境变量
 cp .env.redis.example .env
+```
 
-# 编辑环境变量
-nano .env
+**编辑 .env 文件**：
 
-# 启动服务
+```bash
+# 管理员账号（必填）
+USERNAME=admin
+PASSWORD=your_secure_password
+
+# 存储配置
+NEXT_PUBLIC_STORAGE_TYPE=redis
+REDIS_URL=redis://katelyatv-redis:6379
+
+# 功能开关
+NEXT_PUBLIC_ENABLE_REGISTER=true
+```
+
+```bash
+# 3. 启动服务
 docker compose -f docker-compose.redis.yml up -d
 ```
 
-**重要环境变量配置**：
+### 方案三：Docker + Kvrocks（生产环境）
+
+**特点**：极高可靠性，数据持久化到磁盘，节省内存
 
 ```bash
-# 存储类型
-NEXT_PUBLIC_STORAGE_TYPE=redis
-
-# 管理员账号
-USERNAME=admin
-PASSWORD=your_admin_password
-
-# Redis配置
-REDIS_URL=redis://katelyatv-redis:6379
-
-# 开启用户注册
-NEXT_PUBLIC_ENABLE_REGISTER=true
-```
-
-### 方案三：Docker + Kvrocks（高可靠性）
-
-**适合场景**：生产环境，需要极高的数据可靠性
-
-```bash
-# 下载配置文件
+# 1. 下载配置文件
 curl -O https://raw.githubusercontent.com/katelya77/KatelyaTV/main/docker-compose.kvrocks.yml
 curl -O https://raw.githubusercontent.com/katelya77/KatelyaTV/main/.env.kvrocks.example
+
+# 2. 配置环境变量
 cp .env.kvrocks.example .env
-
-# 编辑环境变量
-nano .env
-
-# 启动服务（无密码版本）
-docker compose -f docker-compose.kvrocks.yml up -d
-
-# 如需密码认证版本，使用：
-# docker compose -f docker-compose.kvrocks.auth.yml up -d
 ```
 
-**重要环境变量配置**：
+**编辑 .env 文件**：
 
 ```bash
-# 存储类型
-NEXT_PUBLIC_STORAGE_TYPE=kvrocks
-
-# 管理员账号（必填）
+# 管理员账号（必填，否则无法登录）
 USERNAME=admin
-PASSWORD=your_admin_password
+PASSWORD=your_secure_password
 
-# Kvrocks配置
+# 存储配置
+NEXT_PUBLIC_STORAGE_TYPE=kvrocks
 KVROCKS_URL=redis://kvrocks:6666
-# 密码配置（可选）
-# KVROCKS_PASSWORD=your_kvrocks_password
 
-# 开启用户注册
+# 功能开关
 NEXT_PUBLIC_ENABLE_REGISTER=true
 ```
 
-**Kvrocks 优势**：
-
-- 🛡️ **极高可靠性**：基于 RocksDB，数据持久化到磁盘
-- ⚡ **性能优异**：完全兼容 Redis 协议，性能更佳
-- 💾 **节省内存**：数据存储在磁盘，内存使用量大幅降低
-
-> 详细部署指南请查看：[Kvrocks 部署文档](docs/KVROCKS_DEPLOYMENT.md)
+```bash
+# 3. 启动服务
+docker compose -f docker-compose.kvrocks.yml up -d
+```
 
 ### 方案四：Vercel + Upstash（免费推荐）
 
-**适合场景**：无服务器，免费部署，支持多用户
+**特点**：完全免费，自动 HTTPS，全球 CDN
 
-#### 基础部署（仅密码保护）
+#### 基础部署
 
-1. **Fork 仓库**：
-
-   - 访问 [KatelyaTV](https://github.com/katelya77/KatelyaTV)
-   - 点击右上角 `Fork` 按钮，将项目 Fork 到你的 GitHub 账号
-
+1. **Fork 项目** → [GitHub 仓库](https://github.com/katelya77/KatelyaTV)
 2. **部署到 Vercel**：
-   - 登录 [Vercel](https://vercel.com/)（推荐使用 GitHub 账号登录）
-   - 点击 `New Project`，选择刚才 Fork 的 `KatelyaTV` 仓库
-   - 在 `Environment Variables` 部分添加：
-     ```
-     PASSWORD=your_password
-     ```
-   - 点击 `Deploy` 开始部署
-   - 等待 2-3 分钟部署完成，获得访问链接
+   - 登录 [Vercel](https://vercel.com/)
+   - 导入刚 Fork 的仓库
+   - 添加环境变量：`PASSWORD=your_password`
+   - 点击 Deploy
 
-#### 高级配置（多用户支持）
+#### 多用户配置
 
-3. **创建 Upstash Redis 数据库**：
+3. **创建 Upstash 数据库**：
 
-   - 访问 [Upstash](https://upstash.com/)，使用 GitHub 账号登录
-   - 点击 `Create Database`，选择免费的区域（推荐选择离你最近的区域）
-   - 记录数据库的 `UPSTASH_REDIS_REST_URL` 和 `UPSTASH_REDIS_REST_TOKEN`
+   - 访问 [Upstash](https://upstash.com/)
+   - 创建免费 Redis 数据库
+   - 获取 `UPSTASH_REDIS_REST_URL` 和 `UPSTASH_REDIS_REST_TOKEN`
 
-4. **在 Vercel 中添加环境变量**：
+4. **添加环境变量**：
 
-   - 进入 Vercel 项目设置页面
-   - 在 `Environment Variables` 添加以下变量：
+```bash
+# 存储配置
+NEXT_PUBLIC_STORAGE_TYPE=upstash
+UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_token
 
-   ```bash
-   # 存储配置
-   NEXT_PUBLIC_STORAGE_TYPE=upstash
-   UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
-   UPSTASH_REDIS_REST_TOKEN=your_token
+# 管理员账号
+USERNAME=admin
+PASSWORD=your_password
 
-   # 管理员账号
-   USERNAME=admin
-   PASSWORD=admin_password
+# 功能开关
+NEXT_PUBLIC_ENABLE_REGISTER=true
+```
 
-   # 用户注册
-   NEXT_PUBLIC_ENABLE_REGISTER=true
+5. **重新部署** → Vercel Dashboard → Redeploy
 
-   # 站点配置
-   NEXT_PUBLIC_SITE_NAME=KatelyaTV
-   NEXT_PUBLIC_SITE_DESCRIPTION=高性能影视播放平台
-   ```
+### 方案五：Cloudflare Pages + D1（全球加速）
 
-5. **重新部署**：
-   - 在 Vercel 项目页面点击 `Deployments` 标签
-   - 点击最新部署旁的三点菜单，选择 `Redeploy`
+**特点**：全球 CDN，无限带宽，免费 SSL
 
-### 方案五：Cloudflare Pages + D1（全球 CDN 加速）
+#### 快速部署
 
-**适合场景**：全球访问，免费 CDN，无限带宽，支持多用户
-
-#### 方法一：网页操作部署（推荐新手）
-
-1. **准备代码仓库**：
-
-   - Fork [KatelyaTV](https://github.com/katelya77/KatelyaTV) 到你的 GitHub 账号
-
-2. **创建 Cloudflare Pages 项目**：
+1. **Fork 项目** → [GitHub 仓库](https://github.com/katelya77/KatelyaTV)
+2. **创建 Pages 项目**：
 
    - 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-   - 左侧菜单选择 `Workers and Pages` → `Create application` → `Pages` → `Connect to Git`
-
-3. **连接仓库并配置**：
-
-   - 选择 Fork 的 `KatelyaTV` 仓库，分支选择 `main`
-   - **构建设置**：
+   - Pages → Connect to Git → 选择仓库
+   - 构建设置：
      ```
      Build command: pnpm install --frozen-lockfile && pnpm run pages:build
      Build output directory: .vercel/output/static
      ```
-   - **兼容性标志**：添加 `nodejs_compat`
+   - 兼容性标志：`nodejs_compat`
 
-4. **环境变量配置**：
-
-   ```bash
-   PASSWORD=your_password   #在这设置密码
-   USERNAME=admin           #在这设置管理员用户名
-   NEXT_PUBLIC_STORAGE_TYPE=d1
-   NEXT_PUBLIC_ENABLE_REGISTER=true   #用户注册功能
-   ```
-
-5. **创建 D1 数据库**（多用户支持）：
-   ```bash
-   wrangler d1 create katelyatv-db
-   wrangler d1 execute katelyatv-db --file=./scripts/d1-init.sql
-   ```
-   在 `wrangler.toml` 中配置数据库 ID
-
-#### 方法二：命令行部署
+3. **环境变量配置**：
 
 ```bash
-# 安装 CLI 并登录
-npm install -g wrangler
-wrangler login
+# 管理员账号
+USERNAME=admin
+PASSWORD=your_password
 
-# 克隆并部署
-git clone https://github.com/your-username/KatelyaTV.git
-cd KatelyaTV
-pnpm install
-pnpm run pages:build
-wrangler pages deploy .vercel/output/static --project-name katelyatv
+# 存储配置
+NEXT_PUBLIC_STORAGE_TYPE=d1
+
+# 功能开关
+NEXT_PUBLIC_ENABLE_REGISTER=true
 ```
 
-### 方案六：Netlify 部署（备选方案）
+4. **创建 D1 数据库**（多用户支持）：
 
-**适合场景**：GitHub 集成，自动部署，免费额度充足
+```bash
+# 安装Wrangler CLI
+npm install -g wrangler
+wrangler auth login
 
-1. **准备仓库**：
+# 创建数据库
+wrangler d1 create katelyatv-db
+wrangler d1 execute katelyatv-db --file=./scripts/d1-init.sql
+```
 
-   - Fork [KatelyaTV](https://github.com/katelya77/KatelyaTV) 到你的 GitHub
-
-2. **部署到 Netlify**：
-
-   - 登录 [Netlify](https://app.netlify.com/)
-   - 点击 `New site from Git`
-   - 选择 GitHub 并授权访问
-   - 选择 KatelyaTV 仓库
-
-3. **配置构建设置**：
-
-   ```
-   Build command: pnpm run build
-   Publish directory: .next
-   ```
-
-4. **添加环境变量**：
-
-   - 在站点设置中找到 `Environment variables`
-   - 添加：
-
-   ```bash
-   PASSWORD=your_password
-   NEXT_PUBLIC_STORAGE_TYPE=localstorage
-   ```
-
-5. **部署完成**：
-   - 获得 `xxx.netlify.app` 访问链接
-   - 可以在设置中配置自定义域名
+5. **配置数据库绑定** → 在 `wrangler.toml` 中添加数据库 ID
 
 ---
 
-## 📝 部署注意事项
+## � 故障排除
 
-### 🚀 性能优化建议
+### 常见部署问题
 
-**Cloudflare Pages 优化**：
+#### Docker + Kvrocks 登录失败 ⚠️
 
-- 启用 Brotli 压缩：在 Cloudflare Dashboard 的 Speed 标签中启用
-- 配置缓存规则：静态资源缓存 30 天，API 缓存 5 分钟
-- 开启 Auto Minify：JS、CSS、HTML 自动压缩
+**症状**：部署成功但无法登录，提示"账号或密码错误"
 
-**Vercel 优化**：
-
-- 使用 Edge Functions 替代 Serverless Functions
-- 配置合理的缓存头：`Cache-Control: public, max-age=3600`
-- 启用分析面板监控性能
-
-**Docker 优化**：
-
-- 使用多阶段构建减小镜像体积
-- 配置健康检查：`HEALTHCHECK --interval=30s CMD curl -f http://localhost:3000 || exit 1`
-- 设置合理的内存限制：`--memory=512m`
-
-### 🔧 常见问题排除
-
-**构建失败**：
+**解决方案**：
 
 ```bash
-# 检查 Node.js 版本（需要 18+）
-node --version
+# 确保 .env 包含完整配置
+USERNAME=admin
+PASSWORD=your_secure_password
+NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+NEXT_PUBLIC_ENABLE_REGISTER=true
 
-# 清理缓存重新安装
-rm -rf node_modules pnpm-lock.yaml
-pnpm install
-
-# 检查环境变量配置
-echo $PASSWORD
+# 重启服务应用配置
+docker compose -f docker-compose.kvrocks.yml down
+docker compose -f docker-compose.kvrocks.yml up -d
 ```
 
-**视频播放问题**：
-
-- 检查 config.json 格式是否正确
-- 确认视频源 API 地址可访问
-- 查看浏览器控制台错误信息
-
-**数据库连接失败**：
+#### 构建失败
 
 ```bash
-# Redis 连接测试
+# 检查Node.js版本 (需要18+)
+node --version
+
+# 清理重装
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
+#### 数据库连接失败
+
+```bash
+# Redis连接测试
 redis-cli -u $REDIS_URL ping
 
-# D1 数据库状态检查
+# D1数据库检查
 wrangler d1 info your-database-name
 
-# Upstash 连接测试
+# Upstash连接测试
 curl -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN" \
      $UPSTASH_REDIS_REST_URL/ping
 ```
 
-**内存溢出**：
+### 环境变量说明
 
-- 调整 Node.js 内存限制：`NODE_OPTIONS="--max-old-space-size=1024"`
-- Docker 增加内存分配：`--memory=1g`
-- 优化视频缓存策略
+| 变量名                        | 必填   | 说明         | 示例值                   |
+| ----------------------------- | ------ | ------------ | ------------------------ |
+| `USERNAME`                    | 是\*   | 管理员用户名 | `admin`                  |
+| `PASSWORD`                    | 是     | 访问密码     | `your_password`          |
+| `NEXT_PUBLIC_STORAGE_TYPE`    | 否     | 存储类型     | `redis/d1/upstash`       |
+| `NEXT_PUBLIC_ENABLE_REGISTER` | 否     | 用户注册     | `true/false`             |
+| `REDIS_URL`                   | 否\*\* | Redis 连接   | `redis://localhost:6379` |
+| `UPSTASH_REDIS_REST_URL`      | 否\*\* | Upstash 地址 | `https://xxx.upstash.io` |
+| `UPSTASH_REDIS_REST_TOKEN`    | 否\*\* | Upstash 令牌 | `AX_xxx`                 |
 
-### 🔒 安全配置
+> \*多用户部署必填 \*\*对应存储类型必填
 
-**生产环境必配**：
+### 视频源配置
 
-```bash
-# 强密码策略
-PASSWORD="$(openssl rand -base64 32)"
+#### 推荐配置文件
 
-# HTTPS 强制重定向
-FORCE_HTTPS=true
+- **基础版**（20+站点）：[config.json](https://www.mediafire.com/file/xl3yo7la2ci378w/config.json/file)
+- **增强版**（94 站点）：[configplus.json](https://www.mediafire.com/file/fbpk1mlupxp3u3v/configplus.json/file)
 
-# 跨域配置
-CORS_ORIGIN="https://your-domain.com"
+#### 配置方式
 
-# 限制管理员访问
-ADMIN_IP_WHITELIST="192.168.1.0/24,10.0.0.0/8"
-```
+1. **Docker**：挂载到 `/app/config.json`
+2. **Vercel/Cloudflare**：提交到仓库根目录
+3. **管理员界面**：访问 `/admin` 上传配置
 
-**防护措施**：
-
-- 启用 DDoS 防护（Cloudflare 免费提供）
-- 配置 CSP 内容安全策略
-- 定期更新依赖包：`pnpm update`
-- 监控异常访问日志
-
-### 💾 数据备份
-
-**定期备份策略**：
-
-```bash
-# Redis 数据备份
-redis-cli -u $REDIS_URL --rdb backup.rdb
-
-# D1 数据库备份
-wrangler d1 export your-db-name --output=backup-$(date +%Y%m%d).sql
-
-# 配置文件备份
-cp config.json config-backup-$(date +%Y%m%d).json
-
-# 自动化备份脚本
-#!/bin/bash
-# backup.sh
-DATE=$(date +%Y%m%d_%H%M%S)
-mkdir -p backups/$DATE
-# 备份逻辑...
-```
-
-### 📊 监控和日志
-
-**性能监控**：
-
-- Vercel Analytics：自动启用
-- Cloudflare Analytics：在 Dashboard 查看
-- 自定义监控：集成 Sentry 或类似服务
-
-**日志分析**：
-
-```bash
-# Docker 容器日志
-docker logs katelyatv-container -f
-
-# Vercel 函数日志
-vercel logs your-project
-
-# Cloudflare 实时日志
-wrangler tail --format=pretty
-```
-
----
-
-## ⚙️ 配置说明
-
-### 🔧 环境变量详解
-
-| 变量名                         | 说明                  | 默认值       | 示例值                   |
-| ------------------------------ | --------------------- | ------------ | ------------------------ |
-| `PASSWORD`                     | 访问密码（必填）      | 无           | `mySecretPass123`        |
-| `USERNAME`                     | 管理员用户名          | 无           | `admin`                  |
-| `NEXT_PUBLIC_SITE_NAME`        | 站点显示名称          | KatelyaTV    | `我的影视站`             |
-| `NEXT_PUBLIC_SITE_DESCRIPTION` | 站点描述              | 高性能...    | `专业的在线影视平台`     |
-| `NEXT_PUBLIC_STORAGE_TYPE`     | 数据存储方式          | localstorage | `redis/d1/upstash`       |
-| `REDIS_URL`                    | Redis 连接字符串      | 无           | `redis://localhost:6379` |
-| `UPSTASH_REDIS_REST_URL`       | Upstash REST API 地址 | 无           | `https://xxx.upstash.io` |
-| `UPSTASH_REDIS_REST_TOKEN`     | Upstash 访问令牌      | 无           | `AX_xxx`                 |
-| `NEXT_PUBLIC_ENABLE_REGISTER`  | 是否允许用户注册      | false        | `true/false`             |
-| `ENABLE_ANALYTICS`             | 启用访问统计          | false        | `true/false`             |
-| `CORS_ORIGIN`                  | 允许的跨域来源        | \*           | `https://example.com`    |
-
-### 🎨 自定义主题
-
-**颜色配置**：
-
-```css
-/* 在 src/styles/colors.css 中自定义 */
-:root {
-  --primary-color: #3b82f6; /* 主色调 */
-  --secondary-color: #64748b; /* 次要颜色 */
-  --background-color: #0f172a; /* 背景色 */
-  --text-color: #e2e8f0; /* 文字颜色 */
-}
-```
-
-**Logo 替换**：
-
-- 替换 `public/logo.png`（推荐尺寸：200x60px）
-- 更新 `public/favicon.ico`
-- 修改 `public/manifest.json` 中的图标路径
-
-### 📁 视频源配置详解
-
-#### 推荐配置源
-
-1. **基础版配置**：
-
-   - 包含 20+ 优质片源
-   - 下载：[config.json](https://www.mediafire.com/file/xl3yo7la2ci378w/config.json/file)
-   - 适合个人使用
-
-2. **增强版配置**：
-   - 包含 94 个精选片源
-   - 下载：[configplus.json](https://www.mediafire.com/file/fbpk1mlupxp3u3v/configplus.json/file)
-   - 重命名为 config.json 使用
-
-#### 配置方式说明
-
-**Docker 部署**：
-
-```bash
-# 方法1：挂载本地配置文件
-docker run -d \
-  -v ./config.json:/app/config.json:ro \
-  -p 3000:3000 \
-  ghcr.io/katelya77/katelyatv:latest
-
-# 方法2：环境变量传入
-docker run -d \
-  -e CONFIG_JSON='{"cache_time":7200,"api_site":{...}}' \
-  -p 3000:3000 \
-  ghcr.io/katelya77/katelyatv:latest
-```
-
-**Vercel 部署**：
-
-1. 将配置内容复制到仓库的 `config.json` 文件中
-2. 提交并推送到 GitHub
-3. Vercel 会自动重新部署
-
-**Cloudflare Pages**：
-
-1. 编辑仓库的 `config.json` 文件
-2. 推送更改触发自动部署
-3. 或在管理员界面 `/admin` 上传配置
-
-**管理员界面配置**：
-
-1. 访问 `https://你的域名/admin`
-2. 使用管理员账号登录
-3. 在「配置管理」中导入或编辑 JSON 配置
-4. 实时生效，无需重启
-
-#### 手动配置格式
+#### 配置格式
 
 ```json
 {
   "cache_time": 7200,
   "api_site": {
-    "resource1": {
-      "api": "https://api.example1.com/provide/vod",
-      "name": "优质资源站1",
-      "detail": "https://example1.com",
-      "type": 1,
-      "playMode": "parse"
-    },
-    "resource2": {
-      "api": "https://api.example2.com/provide/vod",
-      "name": "高清资源站2",
-      "detail": "https://example2.com",
-      "type": 2,
-      "playMode": "direct"
+    "site1": {
+      "api": "https://api.example.com/provide/vod",
+      "name": "资源站名称",
+      "is_adult": false
     }
   }
 }
 ```
-
-**字段说明**：
-
-- `cache_time`：缓存时间（秒）
-- `api`：资源站 API 接口地址
-- `name`：资源站显示名称
-- `detail`：资源站主页地址
-- `type`：资源类型（1=电影电视，2=直播等）
-- `playMode`：播放模式（parse=解析播放，direct=直接播放）
 
 ---
 
@@ -596,12 +349,63 @@ docker run -d \
 - 默认开启过滤，确保安全浏览体验
 - 支持资源分组显示，避免误触
 
+**⚠️ 重要部署要求**：
+
+成人内容过滤功能需要服务器端存储支持，**不能使用 `localstorage` 存储类型**。
+
+| 部署平台         | 推荐存储类型        | 配置要求                  |
+| ---------------- | ------------------- | ------------------------- |
+| Docker           | `redis` / `kvrocks` | 配置 Redis/Kvrocks 服务器 |
+| Vercel           | `upstash`           | 配置 Upstash Redis        |
+| Cloudflare Pages | `d1`                | 配置 D1 数据库            |
+
+**Cloudflare Pages 特殊配置**：
+
+如果你使用 Cloudflare Pages 部署，**必须配置 D1 数据库**才能使用成人内容过滤功能：
+
+1. **创建 D1 数据库**：
+
+   ```bash
+   wrangler d1 create katelyatv-db
+   ```
+
+2. **初始化数据库表**：
+
+   ```bash
+   wrangler d1 execute katelyatv-db --file=./scripts/d1-init.sql
+   ```
+
+3. **配置环境变量**：
+
+   ```bash
+   NEXT_PUBLIC_STORAGE_TYPE=d1
+   ```
+
+4. **更新 wrangler.toml**：
+   ```toml
+   [[d1_databases]]
+   binding = "DB"
+   database_name = "katelyatv-db"
+   database_id = "your-d1-database-id"
+   ```
+
+**故障排除**：
+
+- ❌ **错误**："获取用户设置失败"
+
+  - **原因**：使用了 `localstorage` 存储类型，服务器端 API 无法访问
+  - **解决**：按上述要求配置数据库存储
+
+- ❌ **错误**：过滤开关无法保存
+  - **原因**：存储后端未正确配置或连接失败
+  - **解决**：检查数据库连接和环境变量配置
+
 **使用方法**：
 
 1. **访问用户设置**：
 
    - 登录后访问 `/settings` 页面
-   - 或在用户菜单中点击「用户设置」
+   - 或在用户菜单中点击「内容过滤」
 
 2. **配置过滤选项**：
 
@@ -638,6 +442,11 @@ docker run -d \
 - 默认情况下，所有新用户和未登录用户的成人内容过滤均为开启状态
 - 关闭过滤功能需要用户主动操作，确保使用意图明确
 - 建议管理员在配置资源站时准确标记 `is_adult` 字段
+
+**详细配置指南**：
+
+- 📖 [Cloudflare Pages 成人内容过滤配置指南](./CLOUDFLARE_PAGES_ADULT_FILTER.md)
+- 🗄️ [D1 数据库迁移说明](./D1_MIGRATION.md)
 
 ### 🎯 跳过片头片尾
 
